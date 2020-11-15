@@ -1,211 +1,124 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <title>mmessage</title>
-  <style type="text/css">
-  .formBlock {
-    display: flex;
-    justify-content: center;
-    -ms-align-items: center;
-    align-items: center;
-    flex-direction: column;
-    margin-bottom: 30px;
-  }
-
-  .formBlock h1 {
-    color: #F3E4D1;
-  }
-
-  .formBlock input {
-    height: 20px;
-  }
-
-  ul {
-    margin: 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 1400px;
-  }
-
-  li {
-    box-sizing: border-box;
-    padding: 30px;
-    position: relative;
-    margin-right: 30px;
-    margin-bottom: 30px;
-    list-style-type: none;
-    width: 300px;
-    height: 160px;
-    border-radius: 6px;
-    background: #F6EDEB;
-    box-shadow: 0 0 3px rgba(0, 0, 0, .1);
-    transition: all .3s;
-    word-break: break-all;
-  }
-
-  li::after {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    border-radius: 50%;
-    height: 10px;
-    width: 10px;
-    background: #C3A39A;
-  }
-
-  li:hover {
-    box-shadow: 0 26px 40px -24px rgba(0, 36, 100, 0.3);
-    transform: translateY(-6px)
-  }
-
-  li .time {
-    position: absolute;
-    font-size: 14px;
-    bottom: 10px;
-    left: 30px;
-    color: #aaa;
-  }
-  </style>
-</head>
-
-<body>
-  <div class="formBlock">
-    <h1>留言板</h1>
-    <form>
-      <label>
-        姓名：
-        <input type="text" name="name" placeholder="输入你的名字">
-      </label>
-      <label>
-        留言内容：
-        <input type="text" name="content" placeholder="输入你想留言的内容">
-      </label>
-      <input type="submit" value="提交">
-    </form>
-  </div>
-  <ul class=message></ul>
-  <script src="js/jquery-3.2.1.min.js"></script>
-  <script src="//cdn1.lncld.net/static/js/3.4.2/av-min.js"></script>
-  <script type="text/javascript">
-  (function() {
-    //*****V*****
-    let view = document.querySelector("form");
-    //*****C*****
-    const control = {
-      view: null,
-      init: function(view) {
-        this.view = view
-        model.init()
-        this.bindEvent()
-        this.loadMessage()
-      },
-      bindEvent: function() {
-        this.view.addEventListener("submit", (e) => {
-          e.preventDefault()
-          let name = this.view.querySelector("input[name=name]").value
-          let content = this.view.querySelector("input[name=content]").value
-          if (name === "" || content === "") {
-            alert("请填写完整在提交")
-            return;
-          } else if (name.replace(/\s+/g, "").length > 10) {
-            alert("用户名太长，请换个用户名。")
-            return;
-          }
-          model.save(name, content)
-        })
-      },
-      render: function() {
-        this.view.querySelector("input[name=name]").value = "";
-        this.view.querySelector("input[name=content]").value = "";
-      },
-      createNode: function(element) {
-        let message = element.attributes
-        let name = message.name
-        let content = message.content
-        let time = this.friendlyDate(element.createdAt)
-        console.log(time)
-        let li = document.createElement("li")
-        li.style.backgroundColor = this.randomColor()
-        let span = document.createElement("span")
-        span.setAttribute("class", "time")
-        span.innerHTML = time
-        li.textContent = `${name}: ${content}`
-        li.appendChild(span)
-        document.querySelector(".message").appendChild(li)
-      },
-      loadMessage: function() {
-        model.fetch().then(function(message) {
-          document.querySelector(".message").innerHTML = ""
-          message.reverse().some(function(element, index) {
-
-            control.createNode(element)
-            return index > 20
-          })
-        })
-      },
-      friendlyDate: function(time) {
-        var curDate = new Date();
-        var offSet = (curDate - time) / 1000;
-        console.log(offSet)
-        switch (true) {
-          case offSet < 60 * 10:
-            return "刚刚";
-            break;
-          case (offSet < 60 * 60) && (offSet >= 60 * 10):
-            return `${Math.floor(offSet/60)}分钟前`;
-            break;
-          case (offSet < 60 * 60 * 24) && (offSet >= 60 * 60):
-            return `${Math.floor(offSet/60/60)}小时前`;
-            break;
-          case (offSet < 60 * 60 * 24 * 30) && (offSet >= 60 * 60 * 24):
-            return `${Math.floor(offSet/60/60/24)}天前`;
-            break;
-          default:
-            return "很久很久以前";
-            break;
-        }
-      },
-      randomColor: function() {
-        let r = Math.floor(Math.random() * 255);
-        let g = Math.floor(Math.random() * 255);
-        let b = Math.floor(Math.random() * 255);
-        return `rgba(${r}, ${g}, ${b}, 0.3 )`;
-      }
-
-    }
-    //*****M*****
-    const model = {
-      init: function() {
-        const appId = 'LFbYL9q21JFdefvmHFooVYlL-gzGzoHsz';
-        const appKey = 'o7SI4VJ7WG1l1ngGOuIVozer';
-        AV.init({ appId, appKey });
-      },
-      save: function(name, content) {
-        let Message = AV.Object.extend('Message');
-        let message = new Message();
-        message.save({
-          content: content,
-          name: name
-        }).then((object) => {
-          control.render()
-          control.loadMessage()
-        })
-      },
-      fetch: function() {
-        var query = new AV.Query('Message')
-        return query.find()
-      }
-
-    }
-
-    control.init(view)
-  })()
-  </script>
-</body>
-
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "https://www.w3.org/TR/html4/loose.dtd">
+<html lang="zh-CN" xml:lang="zh-CN">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/><script blzsys="1" type="text/javascript">//<![CDATA[
+			var aFEOTagsMap={};var aFeoOverrideAttrRead=function(tag,att,el){try{var pref="data-feo-orig-";if(el){if(!el.getAttribute(pref+att)){return;}}else{var els;if(tag in aFEOTagsMap){els=aFEOTagsMap[tag];}else{els=document.getElementsByTagName(tag);aFEOTagsMap[tag]=els;}for(var i=els.length-1;i>=0;i--){el=els[i];if(el.getAttribute(pref+att)){if(el.aFeoRealGetAttribute){return;}else{break;}}}if(i<0){return;}}el.aFeoRealGetAttribute=el.getAttribute;el.getAttribute=function(a,force){if(a==att&&!force){a=pref+a;}return this.aFeoRealGetAttribute(a);};Object.defineProperty(el,att,{get:function(){return this.aFeoRealGetAttribute(pref+att);}});}catch(err){}};
+			//]]></script><script blzsys="1" type="text/javascript">var aFeoApplied=true;</script>
+			<meta name="Language" content="zh-CN"/>
+			<meta name="ROBOTS" content="INDEX,FOLLOW"/>
+			<title>主页 - Jvav</title>
+			<meta name="description" content="现在就开始使用 Jvav"/>
+			<meta name="keywords" content="Jvav, downloads, software, Jvav runtime, Jve, Jvav download, Download Jvav "/>
+			<meta name="date" content="2019-07-08"/>
+			<link href="static/css/ren-utf-8~wk056hn61c7rdi1gm9drypo1eimagbu38a7oarp8nqm.css" data-feo-orig-href="/ga/css/screen.css" media="screen" rel="stylesheet" type="text/css" charset="utf-8"/><script blzsys="1" type="text/javascript">aFeoOverrideAttrRead('link', 'href')</script>
+			<meta http-equiv="X-UA-Compatible" content="IE=7" />
+			<style type="text/css">#teconsent a {
+				text-decoration: underline;
+				}
+				#teconsent a:hover {
+					text-decoration: none;
+					}
+			</style>
+			<!-- Matomo -->
+			<script type="text/javascript">
+			var _paq = window._paq || [];
+			/* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+			_paq.push(['trackPageView']);
+			_paq.push(['enableLinkTracking']);
+			(function() {
+				var u="//s.tzg6.com/";
+				_paq.push(['setTrackerUrl', u+'matomo.php']);
+				_paq.push(['setSiteId', '13']);
+				var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+				g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+				})();
+			</script>
+			<!-- End Matomo Code -->
+			<script data-ad-client="ca-pub-3608182058895727" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+			<script async defer src="https://buttons.github.io/buttons.js"></script>
+			<script src="/ga/js/console.js"></script>
+			</head>
+			<body>	
+				<!-- BEGIN: jWidget_C/Header/Display -->
+				<div class="jvh0">
+					<a href="./" class="jvl0" title="jvav.top">jvav.top</a>
+					<p>
+						<a href="/download">下载</a>
+						<a href="/download/help/">帮助</a>
+					</p>
+					<form name="searchForm" method="get" action="https://www.oracle.com/search/results" accept-charset="utf-8" class="jvs0 jv0sv0" onsubmit="if((document.searchForm.Ntt.value == document.searchForm.Ntt.defaultValue) || (document.searchForm.Ntt.value == '')){return false;}">
+						<input type="hidden" name="cat" value="jvavcom">
+						<input type="hidden" name="Ntk" value="SI-ALL5">
+						<input type="hidden" name="lang" value="zhs">
+						<input type="text" size="20" maxlength="55" name="Ntt" class="bodytext" onfocus="if( this.value==this.defaultValue ) this.value='';" onblur="if( this.value=='' ) this.value=this.defaultValue;" value="搜索" title="搜索">
+						<input type="image" name="submit" src="/ga/images/jv0_search_btn.gif" id="searchbtn" alt="搜索" />
+					</form>
+				</div>
+				<!-- END: jWidget_C/Header/Display -->
+				<!--  CONTENT -->
+				<!--  jvc0 -->
+				<div class="jvc0 jvc0v3 clearfix">
+					<!--  jvc0w1 -->
+					<div class="jvc0w1 clearfix">
+						<div class="jvc0w2">
+							<h1>Jvav 与您, <br />立即下载</h1>			
+							<div class="jvdl0 jvdl0v0">
+								<a href="/download" title="免费 Jvav 下载" class="jvdla0">
+									<div class="jvdl0x1"></div>
+									<span> 免费 Jvav 下载</span>
+								</a>
+								<p>
+									<span class="rightarrowred">&raquo;</span> <a href="/about/whatis_jvav.html" title="什么是 Jvav？">什么是 Jvav？</a>
+									<span class="rightarrowred">&raquo;</span>  <a href="/download/installed.html" title="我有 Jvav 吗？">我有 Jvav 吗？</a>
+									<span class="rightarrowred">&raquo;</span>  <a href="/download/help/" title="是否需要帮助？">是否需要帮助？</a>
+									<br /> <a href="/download/" title="所有 Jvav 下载">所有 Jvav 下载</a>
+								</p>
+								<!-- Alert message -->
+								<!-- /Alert message -->
+							</div>
+						</div>
+					</div>
+					<!-- /jvc0w1 -->
+					<div id="jvhx0" class="jvhx0v0">
+						<h2>来自赞助商的 Jvav 课程广告</h2>
+						<!-- BEGIN: jWidget_C/Raw-HTML/Display -->
+						<div>
+							<!-- 01 -->
+							<img src="/static/images/ad-by-toliet.png" alt="tencent-class"></a></a>
+						</div>
+						<!-- END: jWidget_C/Raw-HTML/Display -->
+					</div>
+				</div>
+				<!-- /jvc0 -->
+				<!-- /CONTENT -->
+				<a href="/zh_CN/download/index.jsp"></a>
+				<!-- Added comment -->
+				<!-- BEGIN: jWidget_C/Footer/Display -->
+				<div class="jvf0">
+					<p>
+					  <a href="/about/">关于 Jvav</a>
+					| <a href="/download/support.html">支持</a>
+					| <a href="/zh_CN/download/faq/develop.xml">开发人员</a>
+					<br />
+					<a href="https://www.oracle.com/html/terms.html">使用条款</a>
+					| <a href="https://www.oracle.com/html/3party.html">商标</a>
+					| <a href="/zh_CN/about/disclaimer.jsp">免责声明</a>
+					| <a href="/about/donate.html">捐赠</a>
+					<br />
+					<a class="github-button" href="https://github.com/TZG-official/Jvav" data-icon="octicon-star" data-show-count="true" aria-label="Star TZG-official/Jvav on GitHub">Star</a>
+					</p>
+				</div>
+				<!-- END: jWidget_C/Footer/Display -->
+				<!--[if gte IE 5.5000]><!--><script data-feo-orig-src="static/js/subtlepager.js" src="https://java.com/feo-cdn/z/Y/Ren-UTF-8~zYhWKCjIx0J6H23_Rjq4MtNoUQHhxnspNhq_MRQ37f8.js" type="text/javascript" charset="utf-8"></script><!-- <![endif]-->
+				<!--[if gte IE 6]><!--><script data-feo-orig-src="static/js/global.js" src="https://java.com/feo-cdn/r/R/Ren-UTF-8~rRXd-CEfGscvf9oWKv7YANK_oNn3sENodSF-j4tGBQc.js" type="text/javascript" charset="utf-8"></script><!-- <![endif]-->
+				<script blzsys="1" type="text/javascript">(function(){var oldOnLoad = window.onload;var newOnLoad = (function() {{
+					var cssNode = document.createElement('link');
+					cssNode.href = 'https://java.com/feo-cdn/J/n/Ren-UTF-8~Jnz0USSAAGJNvKDuyBBz0bOGVUn-Xc_6quSMYPXCkoo.css';
+					cssNode.media = 'print';
+					cssNode.rel = 'stylesheet';
+					cssNode.type = 'text/css';
+					cssNode.charset = 'utf-8';
+					document.getElementsByTagName("head")[0].appendChild(cssNode);
+					};
+					});window.onload = (typeof window.onload != 'function') ?(newOnLoad):(function() { oldOnLoad(); newOnLoad();});})();</script></body>
 </html>
